@@ -94,7 +94,7 @@ router.get('/analytics', async (req, res) => {
         SUM(estimated_value) as revenue
       FROM deals
       WHERE status='won' AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
-      GROUP BY DATE_FORMAT(updated_at, '%Y-%m')
+      GROUP BY DATE_FORMAT(updated_at, '%Y-%m'), DATE_FORMAT(updated_at, '%m/%Y')
       ORDER BY month ASC
     `);
 
