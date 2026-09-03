@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM BIM – Quản Lý Deal Phần Mềm BIM</title>
+  <meta name="description" content="Hệ thống CRM chuyên dụng quản lý quy trình bán hàng phần mềm BIM – ArchiCAD, Solibri, GEO5">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <rect width="28" height="28" rx="8" fill="url(#logoGrad)"/>
+          <path d="M7 14L11 18L21 8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs>
+            <linearGradient id="logoGrad" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#6366f1"/>
+              <stop offset="1" stop-color="#8b5cf6"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-name">BIM CRM</span>
+        <span class="logo-sub">Sales Pipeline</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="dashboard" id="nav-dashboard">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" data-page="kanban" id="nav-kanban">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="5" height="15" rx="1"/>
+        </svg>
+        <span>Kanban Pipeline</span>
+      </a>
+      <a href="#" class="nav-item" data-page="deals" id="nav-deals">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <span>Deals</span>
+      </a>
+      <a href="#" class="nav-item" data-page="contacts" id="nav-contacts">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span>Khách Hàng</span>
+      </a>
+      <a href="#" class="nav-item" data-page="followups" id="nav-followups">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        <span>Follow-up</span>
+        <span class="nav-badge" id="followup-badge" style="display:none">0</span>
+      </a>
+      <a href="#" class="nav-item" data-page="activities" id="nav-activities">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        <span>Hoạt Động</span>
+      </a>
+      <a href="#" class="nav-item" data-page="products" id="nav-products">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+        </svg>
+        <span>Sản Phẩm</span>
+      </a>
+      <a href="#" class="nav-item" data-page="analytics" id="nav-analytics">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          <line x1="2" y1="20" x2="22" y2="20"/>
+        </svg>
+        <span>Thống kê</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()" title="Đổi giao diện">
+        <span id="theme-icon">🌙</span>
+        <span id="theme-label">Chế độ tối</span>
+      </button>
+      <div class="user-info">
+        <div class="user-avatar">BIM</div>
+        <div class="user-details">
+          <span class="user-name">Sales Team</span>
+          <span class="user-role">Quản lý deal</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content" id="main-content">
+    <!-- Header -->
+    <header class="top-header">
+      <div class="header-left">
+        <button class="menu-toggle" id="menu-toggle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+            <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+        <h1 class="page-title" id="page-title">Dashboard</h1>
+      </div>
+      <div class="header-right">
+        <div class="header-date" id="header-date"></div>
+        <div id="header-actions"></div>
+        <button class="btn btn-primary" id="global-add-btn" onclick="openGlobalAdd()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Thêm mới
+        </button>
+      </div>
+    </header>
+
+    <!-- Page Container -->
+    <div class="page-container" id="page-container">
+      <!-- Pages loaded here dynamically -->
+    </div>
+  </main>
+
+  <!-- Modal Overlay -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeModal()"></div>
+
+  <!-- Modal Container -->
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modal-title">Modal</h3>
+      <button class="modal-close" onclick="closeModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="/js/api.js"></script>
+  <script src="/js/theme.js"></script>
+  <script src="/js/notifications.js"></script>
+  <script src="/js/components/dashboard.js"></script>
+  <script src="/js/components/kanban.js"></script>
+  <script src="/js/components/deals.js"></script>
+  <script src="/js/components/contacts.js"></script>
+  <script src="/js/components/followups.js"></script>
+  <script src="/js/components/activities.js"></script>
+  <script src="/js/components/products.js"></script>
+  <script src="/js/components/analytics.js"></script>
+  <script src="/js/components/quote.js"></script>
+  <script src="/js/modals.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
