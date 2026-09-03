@@ -45,7 +45,7 @@ router.get('/dashboard', async (req, res) => {
     `);
     // Deals by product
     const [byProduct] = await db.execute(`
-      SELECT p.name as product_name, COUNT(d.id) as deal_count, SUM(d.estimated_value) as total_value
+      SELECT ANY_VALUE(p.name) as product_name, COUNT(d.id) as deal_count, SUM(d.estimated_value) as total_value
       FROM deals d
       LEFT JOIN products p ON d.product_id=p.id
       WHERE d.status='open'
@@ -108,14 +108,14 @@ router.get('/analytics', async (req, res) => {
     // Top products by revenue
     const [topProducts] = await db.execute(`
       SELECT 
-        COALESCE(p.name, 'Không xác định') as product_name,
-        p.product_group,
+        COALESCE(ANY_VALUE(p.name), 'Không xác định') as product_name,
+        ANY_VALUE(p.product_group) as product_group,
         COUNT(d.id) as deals_won,
         SUM(d.estimated_value) as total_revenue
       FROM deals d
       LEFT JOIN products p ON d.product_id = p.id
       WHERE d.status='won'
-      GROUP BY d.product_id, p.name, p.product_group
+      GROUP BY d.product_id
       ORDER BY total_revenue DESC
       LIMIT 10
     `);
@@ -157,9 +157,9 @@ router.get('/silent', async (req, res) => {
   try {
     const days = parseInt(req.query.days) || 7;
     const [rows] = await db.execute(`
-      SELECT d.id, d.title, d.stage, d.estimated_value, d.updated_at,
-        c.name as contact_name, c.phone as contact_phone, c.company as contact_company,
-        p.name as product_name,
+      SELECT d.id, d.title, d.stage, d.estimated_value, d.updated_at, d.created_at,
+        ANY_VALUE(c.name) as contact_name, ANY_VALUE(c.phone) as contact_phone, ANY_VALUE(c.company) as contact_company,
+        ANY_VALUE(p.name) as product_name,
         MAX(a.activity_date) as last_activity_date,
         DATEDIFF(CURDATE(), COALESCE(MAX(a.activity_date), d.created_at)) as days_silent
       FROM deals d
@@ -167,7 +167,7 @@ router.get('/silent', async (req, res) => {
       LEFT JOIN products p ON d.product_id = p.id
       LEFT JOIN activities a ON d.id = a.deal_id
       WHERE d.status = 'open'
-      GROUP BY d.id
+      GROUP BY d.id, d.title, d.stage, d.estimated_value, d.updated_at, d.created_at
       HAVING days_silent >= ?
       ORDER BY days_silent DESC
     `, [days]);
