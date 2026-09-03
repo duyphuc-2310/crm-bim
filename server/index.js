@@ -35,6 +35,11 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// API 404 handler (must be before SPA catch-all)
+app.use('/api', (req, res) => {
+  res.status(404).json({ success: false, error: `API route not found: ${req.method} ${req.path}` });
+});
+
 // Catch-all for SPA routing
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
