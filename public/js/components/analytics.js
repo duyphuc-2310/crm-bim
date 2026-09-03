@@ -47,7 +47,7 @@ async function renderAnalytics() {
               <tbody>
                 ${topProducts.map(p => `
                   <tr>
-                    <td><strong>${p.product_name}</strong><br><span style="font-size:11px;color:var(--text-secondary)">${PRODUCT_GROUP_LABELS[p.product_group]||p.product_group}</span></td>
+                    <td><strong>${p.product_name}</strong><br><span style="font-size:11px;color:var(--text-secondary)">${p.product_group ? (PRODUCT_GROUP_LABELS[p.product_group]||p.product_group) : ''}</span></td>
                     <td>${p.deals_won}</td>
                     <td style="color:var(--green)">${formatCurrency(p.total_revenue)}</td>
                   </tr>
