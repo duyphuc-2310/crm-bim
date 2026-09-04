@@ -40,6 +40,7 @@ async function loadInvoicesList() {
               <th>Khách hàng</th>
               <th>Tên Deal (Sản phẩm)</th>
               <th>Giá trị Hóa đơn</th>
+              <th>Hoa hồng (5%)</th>
               <th>Ngày chốt</th>
               <th style="text-align: right;">Thao tác</th>
             </tr>
@@ -56,6 +57,7 @@ async function loadInvoicesList() {
                   <span class="badge" style="background:var(--bg-lighter); color:var(--text-secondary); margin-top:4px;">${d.product_name || 'Không xác định'}</span>
                 </td>
                 <td style="color:var(--green); font-weight:bold;">${formatCurrency(d.estimated_value)}</td>
+                <td style="color:var(--yellow); font-weight:bold;">${formatCurrency(Number(d.estimated_value) * 0.05)}</td>
                 <td>${formatDate(d.updated_at)}</td>
                 <td style="text-align: right;">
                   <button class="btn btn-ghost btn-sm" onclick="exportSingleInvoice(${d.id})" title="Tải Excel cho đơn hàng này">
@@ -65,6 +67,15 @@ async function loadInvoicesList() {
               </tr>
             `).join('')}
           </tbody>
+          <tfoot>
+            <tr style="background: var(--bg-lighter); font-weight: bold;">
+              <td colspan="3" style="text-align: right;">Tổng Hoa Hồng (5%):</td>
+              <td style="color:var(--yellow); font-size: 16px;">
+                ${formatCurrency(data.reduce((sum, d) => sum + (Number(d.estimated_value) * 0.05), 0))}
+              </td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     `;
@@ -90,7 +101,7 @@ async function exportInvoicesToCSV(contactId = null) {
 
     const headers = [
       'Tên Deal', 'Khách hàng', 'Công ty', 'Số điện thoại', 'Sản phẩm',
-      'Giá trị Hóa đơn (VND)', 'Ngày chốt', 'Ghi chú'
+      'Giá trị Hóa đơn (VND)', 'Hoa hồng 5% (VND)', 'Ngày chốt', 'Ghi chú'
     ];
     
     function fmtDateExact(d) {
@@ -107,6 +118,7 @@ async function exportInvoicesToCSV(contactId = null) {
       d.contact_phone || '',
       d.product_name || 'Không xác định',
       d.estimated_value || '0',
+      (Number(d.estimated_value || 0) * 0.05).toString(),
       fmtDateExact(d.updated_at),
       (d.notes || '').replace(/\n/g, ' ')
     ]);
