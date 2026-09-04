@@ -5,16 +5,15 @@ const db = require('../db');
 // GET all deals with filters (for kanban or list)
 router.get('/', async (req, res) => {
   try {
-    const { stage, status, contact_id, product_id } = req.query;
+    const { stage, status, contact_id } = req.query; // Removed product_id filter for now as it requires complex JOIN if needed, or we can implement it using EXISTS
     let query = `
       SELECT d.*, 
         c.name as contact_name, c.company as contact_company, c.phone as contact_phone,
-        p.name as product_name, p.product_group,
+        (SELECT GROUP_CONCAT(p.name SEPARATOR ' + ') FROM deal_products dp JOIN products p ON dp.product_id = p.id WHERE dp.deal_id = d.id) as product_name,
         (SELECT COUNT(*) FROM activities a WHERE a.deal_id = d.id) as activity_count,
         (SELECT COUNT(*) FROM followups f WHERE f.deal_id = d.id AND f.status = 'pending') as pending_followups
       FROM deals d
       LEFT JOIN contacts c ON d.contact_id = c.id
-      LEFT JOIN products p ON d.product_id = p.id
     `;
     const params = [];
     const conditions = [];
@@ -22,7 +21,13 @@ router.get('/', async (req, res) => {
     if (status) { conditions.push('d.status = ?'); params.push(status); }
     else { conditions.push("d.status = 'open'"); }
     if (contact_id) { conditions.push('d.contact_id = ?'); params.push(contact_id); }
-    if (product_id) { conditions.push('d.product_id = ?'); params.push(product_id); }
+    
+    // Support filtering by product_id using EXISTS
+    if (req.query.product_id) {
+      conditions.push('EXISTS (SELECT 1 FROM deal_products dp WHERE dp.deal_id = d.id AND dp.product_id = ?)');
+      params.push(req.query.product_id);
+    }
+
     if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
     query += ' ORDER BY d.updated_at DESC';
     const [rows] = await db.execute(query, params);
@@ -45,10 +50,9 @@ router.get('/kanban', async (req, res) => {
     const [deals] = await db.execute(`
       SELECT d.*, 
         c.name as contact_name, c.company as contact_company,
-        p.name as product_name, p.product_group
+        (SELECT GROUP_CONCAT(p.name SEPARATOR ' + ') FROM deal_products dp JOIN products p ON dp.product_id = p.id WHERE dp.deal_id = d.id) as product_name
       FROM deals d
       LEFT JOIN contacts c ON d.contact_id = c.id
-      LEFT JOIN products p ON d.product_id = p.id
       ORDER BY d.updated_at DESC
     `);
     const kanban = stages.map(s => ({
@@ -65,14 +69,20 @@ router.get('/kanban', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const [deals] = await db.execute(`
-      SELECT d.*, c.name as contact_name, c.company as contact_company, c.phone as contact_phone, c.email as contact_email,
-        p.name as product_name, p.product_group, p.ref_price
+      SELECT d.*, c.name as contact_name, c.company as contact_company, c.phone as contact_phone, c.email as contact_email
       FROM deals d
       LEFT JOIN contacts c ON d.contact_id = c.id
-      LEFT JOIN products p ON d.product_id = p.id
       WHERE d.id = ?
     `, [req.params.id]);
     if (!deals.length) return res.status(404).json({ success: false, error: 'Không tìm thấy' });
+    
+    const [products] = await db.execute(`
+      SELECT p.id, p.name, dp.price
+      FROM deal_products dp
+      JOIN products p ON dp.product_id = p.id
+      WHERE dp.deal_id = ?
+    `, [req.params.id]);
+
     const [activities] = await db.execute(
       'SELECT * FROM activities WHERE deal_id = ? ORDER BY activity_date DESC',
       [req.params.id]
@@ -81,46 +91,79 @@ router.get('/:id', async (req, res) => {
       'SELECT * FROM followups WHERE deal_id = ? ORDER BY due_date ASC',
       [req.params.id]
     );
-    res.json({ success: true, data: { ...deals[0], activities, followups } });
+    res.json({ success: true, data: { ...deals[0], products, activities, followups } });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
 // POST create deal
 router.post('/', async (req, res) => {
+  const conn = await db.getConnection();
   try {
-    const { title, contact_id, product_id, estimated_value, stage, next_followup_date, probability, notes } = req.body;
+    const { title, contact_id, products, stage, next_followup_date, probability, notes } = req.body;
     if (!title || !contact_id) return res.status(400).json({ success: false, error: 'Thiếu thông tin bắt buộc' });
-    const [result] = await db.execute(
-      'INSERT INTO deals (title, contact_id, product_id, estimated_value, stage, next_followup_date, probability, notes) VALUES (?,?,?,?,?,?,?,?)',
-      [title, contact_id, product_id||null, estimated_value||0, stage||1, next_followup_date||null, probability||10, notes||'']
+    
+    // Calculate estimated_value from products array [{id, price}]
+    const estimated_value = Array.isArray(products) ? products.reduce((sum, p) => sum + Number(p.price || 0), 0) : 0;
+
+    await conn.beginTransaction();
+    const [result] = await conn.execute(
+      'INSERT INTO deals (title, contact_id, estimated_value, stage, next_followup_date, probability, notes) VALUES (?,?,?,?,?,?,?)',
+      [title, contact_id, estimated_value, stage||1, next_followup_date||null, probability||10, notes||'']
     );
-    // Auto create followup if date set
+    
+    const deal_id = result.insertId;
+    if (Array.isArray(products) && products.length > 0) {
+      for (const p of products) {
+        await conn.execute('INSERT INTO deal_products (deal_id, product_id, price) VALUES (?, ?, ?)', [deal_id, p.id, p.price || 0]);
+      }
+    }
+
     if (next_followup_date) {
-      await db.execute(
+      await conn.execute(
         'INSERT INTO followups (deal_id, contact_id, due_date, content, priority) VALUES (?,?,?,?,?)',
-        [result.insertId, contact_id, next_followup_date, `Follow-up deal: ${title}`, 'medium']
+        [deal_id, contact_id, next_followup_date, `Follow-up deal: ${title}`, 'medium']
       );
     }
-    const [rows] = await db.execute('SELECT * FROM deals WHERE id = ?', [result.insertId]);
-    res.status(201).json({ success: true, data: rows[0] });
-  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    
+    await conn.commit();
+    res.json({ success: true, id: deal_id });
+  } catch (err) { 
+    await conn.rollback();
+    res.status(500).json({ success: false, error: err.message }); 
+  } finally {
+    conn.release();
+  }
 });
 
 // PUT update deal
 router.put('/:id', async (req, res) => {
+  const conn = await db.getConnection();
   try {
-    const { title, contact_id, product_id, estimated_value, stage, status, next_followup_date, probability, notes } = req.body;
-    await db.execute(
-      'UPDATE deals SET title=?, contact_id=?, product_id=?, estimated_value=?, stage=?, status=?, next_followup_date=?, probability=?, notes=? WHERE id=?',
-      [title, contact_id, product_id||null, estimated_value||0, stage||1, status||'open', next_followup_date||null, probability||10, notes||'', req.params.id]
+    const { title, contact_id, products, stage, status, next_followup_date, probability, notes } = req.body;
+    
+    const estimated_value = Array.isArray(products) ? products.reduce((sum, p) => sum + Number(p.price || 0), 0) : 0;
+
+    await conn.beginTransaction();
+    await conn.execute(
+      'UPDATE deals SET title=?, contact_id=?, estimated_value=?, stage=?, status=?, next_followup_date=?, probability=?, notes=? WHERE id=?',
+      [title, contact_id, estimated_value, stage, status, next_followup_date||null, probability, notes, req.params.id]
     );
-    const [rows] = await db.execute(`
-      SELECT d.*, c.name as contact_name, c.company as contact_company, p.name as product_name
-      FROM deals d LEFT JOIN contacts c ON d.contact_id = c.id LEFT JOIN products p ON d.product_id = p.id
-      WHERE d.id = ?
-    `, [req.params.id]);
-    res.json({ success: true, data: rows[0] });
-  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+
+    if (Array.isArray(products)) {
+      await conn.execute('DELETE FROM deal_products WHERE deal_id = ?', [req.params.id]);
+      for (const p of products) {
+        await conn.execute('INSERT INTO deal_products (deal_id, product_id, price) VALUES (?, ?, ?)', [req.params.id, p.id, p.price || 0]);
+      }
+    }
+    
+    await conn.commit();
+    res.json({ success: true });
+  } catch (err) { 
+    await conn.rollback();
+    res.status(500).json({ success: false, error: err.message }); 
+  } finally {
+    conn.release();
+  }
 });
 
 // PATCH update stage only (for kanban drag)

@@ -45,8 +45,40 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
+// Auto Migrate on Startup
+async function autoMigrate() {
+  try {
+    const db = require('./db');
+    // Check if deal_products exists
+    const [tables] = await db.execute("SHOW TABLES LIKE 'deal_products'");
+    if (tables.length === 0) {
+      console.log('Migrating: Creating deal_products table...');
+      await db.execute(`
+        CREATE TABLE deal_products (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          deal_id INT NOT NULL,
+          product_id INT NOT NULL,
+          price DECIMAL(15,0) DEFAULT 0,
+          FOREIGN KEY (deal_id) REFERENCES deals(id) ON DELETE CASCADE,
+          FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `);
+      
+      console.log('Migrating: Copying existing data...');
+      const [deals] = await db.execute('SELECT id, product_id, estimated_value FROM deals WHERE product_id IS NOT NULL');
+      for (const d of deals) {
+        await db.execute('INSERT INTO deal_products (deal_id, product_id, price) VALUES (?, ?, ?)', [d.id, d.product_id, d.estimated_value]);
+      }
+      console.log('Migration completed successfully!');
+    }
+  } catch (err) {
+    console.error('Migration failed:', err);
+  }
+}
+
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  await autoMigrate();
   console.log(`\n🚀 CRM BIM Server đang chạy tại http://localhost:${PORT}`);
   console.log(`📊 phpMyAdmin: http://localhost/phpmyadmin`);
   console.log(`🗄️  Database: ${process.env.DB_NAME || 'crm_bim'}\n`);

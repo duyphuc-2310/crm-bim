@@ -179,6 +179,20 @@ async function openDealDetail(id) {
           <div style="font-size:12px;color:var(--text-secondary)">Xác suất chốt: <strong style="color:${data.probability>=70?'var(--green)':data.probability>=40?'var(--yellow)':'var(--text-muted)'}">${data.probability}%</strong></div>
         </div>
       </div>
+      
+      <div style="margin-bottom:16px; background:var(--bg-lighter); padding:12px; border-radius:8px;">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">SẢN PHẨM TRONG DEAL</div>
+        ${data.products && data.products.length > 0 ? 
+          data.products.map(p => `
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:13px;">
+              <span style="font-weight:500;">• ${p.name}</span>
+              <span style="color:var(--text-secondary);">${formatCurrency(p.price)}</span>
+            </div>
+          `).join('') 
+          : '<div style="font-size:13px; color:var(--text-muted)">Không có sản phẩm</div>'
+        }
+      </div>
+
       <div class="form-row" style="margin-bottom:16px">
         <div>
           <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">FOLLOW-UP TIẾP THEO</div>

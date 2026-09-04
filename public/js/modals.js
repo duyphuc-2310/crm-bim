@@ -38,39 +38,71 @@ async function openEditDealModal(id) {
   } catch(e) {}
 }
 
+function getDealProductRowHtml(productId = '', price = '') {
+  return `
+    <div class="deal-product-row" style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
+      <select class="form-control dp-select" style="flex:2" onchange="updateDealTotal()">
+        <option value="">-- Chọn sản phẩm --</option>
+        ${cachedProducts.map(p => `<option value="${p.id}" ${productId==p.id?'selected':''}>${p.name}</option>`).join('')}
+      </select>
+      <input type="number" class="form-control dp-price" style="flex:1" value="${price}" placeholder="Giá (VND)" oninput="updateDealTotal()">
+      <button type="button" class="btn btn-icon btn-ghost btn-sm" onclick="this.parentElement.remove(); updateDealTotal();" style="color:var(--red)">✕</button>
+    </div>
+  `;
+}
+
+function addDealProductRow() {
+  const container = document.getElementById('f-deal-products-container');
+  if (container) {
+    container.insertAdjacentHTML('beforeend', getDealProductRowHtml());
+  }
+}
+
+function updateDealTotal() {
+  const priceInputs = document.querySelectorAll('.dp-price');
+  let total = 0;
+  priceInputs.forEach(input => {
+    total += Number(input.value) || 0;
+  });
+  const totalEl = document.getElementById('f-deal-total');
+  if (totalEl) totalEl.textContent = formatCurrency(total);
+}
+
 function getDealForm(d = {}) {
-  const todayStr = new Date().toISOString().split('T')[0];
+  const existingProducts = d.products || [];
+  let productsHtml = '';
+  if (existingProducts.length === 0) {
+    productsHtml = getDealProductRowHtml();
+  } else {
+    productsHtml = existingProducts.map(p => getDealProductRowHtml(p.id, p.price)).join('');
+  }
+
   return `
     <div class="form-group">
       <label>Tên Deal *</label>
       <input class="form-control" id="f-deal-title" value="${d.title||''}" placeholder="VD: ArchiCAD 27 - Công ty ABC (3 license)">
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Khách hàng *</label>
-        <select class="form-control" id="f-deal-contact" onchange="handleContactChange(this.value)">
-          <option value="">-- Chọn khách hàng --</option>
-          ${cachedContacts.map(c => `<option value="${c.id}" ${d.contact_id==c.id?'selected':''}>${c.name}${c.company?' ('+c.company+')':''}</option>`).join('')}
-        </select>
+    <div class="form-group">
+      <label>Khách hàng *</label>
+      <select class="form-control" id="f-deal-contact">
+        <option value="">-- Chọn khách hàng --</option>
+        ${cachedContacts.map(c => `<option value="${c.id}" ${d.contact_id==c.id?'selected':''}>${c.name}${c.company?' ('+c.company+')':''}</option>`).join('')}
+      </select>
+    </div>
+    
+    <div class="form-group" style="background:var(--bg-lighter); padding:16px; border-radius:8px; border:1px solid var(--border);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <label style="margin:0">Sản phẩm trong Deal</label>
+        <button type="button" class="btn btn-sm btn-ghost" onclick="addDealProductRow()">+ Thêm SP</button>
       </div>
-      <div class="form-group">
-        <label>Sản phẩm</label>
-        <select class="form-control" id="f-deal-product">
-          <option value="">-- Chọn sản phẩm --</option>
-          ${cachedProducts.map(p => `<option value="${p.id}" ${d.product_id==p.id?'selected':''}>${p.name}</option>`).join('')}
-        </select>
+      <div id="f-deal-products-container">
+        ${productsHtml}
+      </div>
+      <div style="text-align:right; margin-top:12px; font-weight:bold;">
+        Tổng tiền: <span id="f-deal-total" style="color:var(--green)">0 ₫</span>
       </div>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Giá trị ước tính (VND)</label>
-        <input class="form-control" id="f-deal-value" type="number" value="${d.estimated_value||''}" placeholder="45000000">
-      </div>
-      <div class="form-group">
-        <label>Xác suất chốt (%)</label>
-        <input class="form-control" id="f-deal-prob" type="number" min="0" max="100" value="${d.probability||10}" placeholder="10-90">
-      </div>
-    </div>
+
     <div class="form-row">
       <div class="form-group">
         <label>Giai đoạn</label>
@@ -79,30 +111,46 @@ function getDealForm(d = {}) {
         </select>
       </div>
       <div class="form-group">
-        <label>Follow-up tiếp theo</label>
-        <input class="form-control" id="f-deal-followup" type="date" value="${d.next_followup_date ? d.next_followup_date.split('T')[0] : ''}">
+        <label>Xác suất chốt (%)</label>
+        <input class="form-control" id="f-deal-prob" type="number" min="0" max="100" value="${d.probability||10}" placeholder="10-90">
       </div>
+    </div>
+    <div class="form-group">
+      <label>Follow-up tiếp theo</label>
+      <input class="form-control" id="f-deal-followup" type="date" value="${d.next_followup_date ? d.next_followup_date.split('T')[0] : ''}">
     </div>
     <div class="form-group">
       <label>Ghi chú</label>
       <textarea class="form-control" id="f-deal-notes" rows="3" placeholder="Ghi chú về deal, yêu cầu đặc biệt...">${d.notes||''}</textarea>
     </div>
+    <script>setTimeout(updateDealTotal, 100);</script>
   `;
 }
 
 async function saveDeal() {
-  const d = {
-    title: document.getElementById('f-deal-title')?.value?.trim(),
-    contact_id: document.getElementById('f-deal-contact')?.value,
-    product_id: document.getElementById('f-deal-product')?.value || null,
-    estimated_value: document.getElementById('f-deal-value')?.value || 0,
-    probability: document.getElementById('f-deal-prob')?.value || 10,
-    stage: document.getElementById('f-deal-stage')?.value || 1,
-    next_followup_date: document.getElementById('f-deal-followup')?.value || null,
-    notes: document.getElementById('f-deal-notes')?.value?.trim()
-  };
-  if (!d.title) { showToast('Nhập tên deal!', 'error'); return; }
-  if (!d.contact_id) { showToast('Chọn khách hàng!', 'error'); return; }
+  const title = document.getElementById('f-deal-title')?.value?.trim();
+  const contact_id = document.getElementById('f-deal-contact')?.value;
+  const probability = document.getElementById('f-deal-prob')?.value || 10;
+  const stage = document.getElementById('f-deal-stage')?.value || 1;
+  const next_followup_date = document.getElementById('f-deal-followup')?.value || null;
+  const notes = document.getElementById('f-deal-notes')?.value?.trim();
+
+  // Gather products
+  const products = [];
+  const rows = document.querySelectorAll('.deal-product-row');
+  rows.forEach(r => {
+    const pId = r.querySelector('.dp-select').value;
+    const pPrice = r.querySelector('.dp-price').value;
+    if (pId) {
+      products.push({ id: pId, price: pPrice || 0 });
+    }
+  });
+
+  if (!title) { showToast('Nhập tên deal!', 'error'); return; }
+  if (!contact_id) { showToast('Chọn khách hàng!', 'error'); return; }
+
+  const d = { title, contact_id, products, probability, stage, next_followup_date, notes };
+
   try {
     if (editingDealId) {
       await api.updateDeal(editingDealId, d);
@@ -117,29 +165,7 @@ async function saveDeal() {
   } catch(err) {}
 }
 
-function handleContactChange(contactId) {
-  if (!contactId) return;
-  const contact = cachedContacts.find(c => c.id == contactId);
-  if (!contact) return;
-  
-  const productSelect = document.getElementById('f-deal-product');
-  if (!productSelect || productSelect.value) return; // Only suggest if empty
-  
-  let suggestedProduct = null;
-  // Suggest ARCHICAD for designers
-  if (contact.org_type === 'kts_doc_lap' || contact.org_type === 'cty_thiet_ke') {
-    suggestedProduct = cachedProducts.find(p => p.name.includes('ARCHICAD'));
-  }
-  // Suggest Solibri or BIMcloud for owners/contractors
-  else if (contact.org_type === 'chu_dau_tu' || contact.org_type === 'tong_thau') {
-    suggestedProduct = cachedProducts.find(p => p.name.includes('Solibri') || p.name.includes('BIMcloud'));
-  }
-  
-  if (suggestedProduct) {
-    productSelect.value = suggestedProduct.id;
-    showToast('💡 Đã tự động gợi ý sản phẩm phù hợp với khách hàng', 'info');
-  }
-}
+// handleContactChange removed as auto-suggesting single product is incompatible with multi-product array
 
 // ---- CONTACT MODAL ----
 let editingContactId = null;

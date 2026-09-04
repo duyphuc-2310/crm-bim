@@ -35,21 +35,22 @@ router.get('/dashboard', async (req, res) => {
     // Top deals by value
     const [topDeals] = await db.execute(`
       SELECT d.id, d.title, d.estimated_value, d.stage, d.probability,
-        c.name as contact_name, c.company as contact_company, p.name as product_name
+        c.name as contact_name, c.company as contact_company,
+        (SELECT GROUP_CONCAT(p.name SEPARATOR ' + ') FROM deal_products dp JOIN products p ON dp.product_id = p.id WHERE dp.deal_id = d.id) as product_name
       FROM deals d
       LEFT JOIN contacts c ON d.contact_id=c.id
-      LEFT JOIN products p ON d.product_id=p.id
       WHERE d.status='open'
       ORDER BY d.estimated_value DESC
       LIMIT 5
     `);
-    // Deals by product
+    // Deals by product (Open pipeline value by product)
     const [byProduct] = await db.execute(`
-      SELECT ANY_VALUE(p.name) as product_name, COUNT(d.id) as deal_count, SUM(d.estimated_value) as total_value
+      SELECT ANY_VALUE(p.name) as product_name, COUNT(DISTINCT d.id) as deal_count, SUM(dp.price) as total_value
       FROM deals d
-      LEFT JOIN products p ON d.product_id=p.id
+      JOIN deal_products dp ON d.id = dp.deal_id
+      JOIN products p ON dp.product_id = p.id
       WHERE d.status='open'
-      GROUP BY d.product_id
+      GROUP BY dp.product_id
       ORDER BY total_value DESC
     `);
     // Recent activities
@@ -110,12 +111,13 @@ router.get('/analytics', async (req, res) => {
       SELECT 
         COALESCE(ANY_VALUE(p.name), 'Không xác định') as product_name,
         ANY_VALUE(p.product_group) as product_group,
-        COUNT(d.id) as deals_won,
-        SUM(d.estimated_value) as total_revenue
+        COUNT(DISTINCT d.id) as deals_won,
+        SUM(dp.price) as total_revenue
       FROM deals d
-      LEFT JOIN products p ON d.product_id = p.id
+      JOIN deal_products dp ON d.id = dp.deal_id
+      JOIN products p ON dp.product_id = p.id
       WHERE d.status='won'
-      GROUP BY d.product_id
+      GROUP BY dp.product_id
       ORDER BY total_revenue DESC
       LIMIT 10
     `);
@@ -159,12 +161,11 @@ router.get('/silent', async (req, res) => {
     const [rows] = await db.execute(`
       SELECT d.id, d.title, d.stage, d.estimated_value, d.updated_at, d.created_at,
         ANY_VALUE(c.name) as contact_name, ANY_VALUE(c.phone) as contact_phone, ANY_VALUE(c.company) as contact_company,
-        ANY_VALUE(p.name) as product_name,
+        (SELECT GROUP_CONCAT(p.name SEPARATOR ' + ') FROM deal_products dp JOIN products p ON dp.product_id = p.id WHERE dp.deal_id = d.id) as product_name,
         MAX(a.activity_date) as last_activity_date,
         DATEDIFF(CURDATE(), COALESCE(MAX(a.activity_date), d.created_at)) as days_silent
       FROM deals d
       LEFT JOIN contacts c ON d.contact_id = c.id
-      LEFT JOIN products p ON d.product_id = p.id
       LEFT JOIN activities a ON d.id = a.deal_id
       WHERE d.status = 'open'
       GROUP BY d.id, d.title, d.stage, d.estimated_value, d.updated_at, d.created_at

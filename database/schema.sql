@@ -44,7 +44,6 @@ CREATE TABLE IF NOT EXISTS deals (
     id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     contact_id INT NOT NULL,
-    product_id INT,
     estimated_value DECIMAL(15,0) DEFAULT 0,
     stage TINYINT NOT NULL DEFAULT 1 COMMENT '1=Mới, 2=Khảo sát, 3=Đề xuất, 4=Demo, 5=Báo giá, 6=Đàm phán, 7=Chốt',
     status ENUM('open','won','lost') NOT NULL DEFAULT 'open',
@@ -53,8 +52,19 @@ CREATE TABLE IF NOT EXISTS deals (
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
+    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================
+-- Bảng Chi tiết Sản phẩm trong Deal (Deal_Products)
+-- ============================================
+CREATE TABLE IF NOT EXISTS deal_products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    deal_id INT NOT NULL,
+    product_id INT NOT NULL,
+    price DECIMAL(15,0) DEFAULT 0,
+    FOREIGN KEY (deal_id) REFERENCES deals(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================
