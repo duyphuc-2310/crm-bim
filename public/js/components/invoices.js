@@ -41,6 +41,7 @@ async function loadInvoicesList() {
               <th>Tên Deal (Sản phẩm)</th>
               <th>Giá trị Hóa đơn</th>
               <th>Ngày chốt</th>
+              <th style="text-align: right;">Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -56,6 +57,11 @@ async function loadInvoicesList() {
                 </td>
                 <td style="color:var(--green); font-weight:bold;">${formatCurrency(d.estimated_value)}</td>
                 <td>${formatDate(d.updated_at)}</td>
+                <td style="text-align: right;">
+                  <button class="btn btn-ghost btn-sm" onclick="exportSingleInvoice(${d.id})" title="Tải Excel cho đơn hàng này">
+                    📥 Tải Hóa đơn
+                  </button>
+                </td>
               </tr>
             `).join('')}
           </tbody>
@@ -102,20 +108,20 @@ async function exportInvoicesToCSV(contactId = null) {
       d.product_name || 'Không xác định',
       d.estimated_value || '0',
       fmtDateExact(d.updated_at),
-      (d.notes || '').replace(/\\n/g, ' ')
+      (d.notes || '').replace(/\n/g, ' ')
     ]);
 
-    let csvContent = "\\uFEFF" + headers.join(',') + '\\n';
+    let csvContent = "\uFEFF" + headers.join(',') + '\n';
     rows.forEach(r => {
       const escaped = r.map(field => {
         if (field === null || field === undefined) return '""';
         let str = String(field);
-        if (str.includes(',') || str.includes('"') || str.includes('\\n')) {
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
           str = '"' + str.replace(/"/g, '""') + '"';
         }
         return str;
       });
-      csvContent += escaped.join(',') + '\\n';
+      csvContent += escaped.join(',') + '\n';
     });
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -132,3 +138,66 @@ async function exportInvoicesToCSV(contactId = null) {
     showToast('Lỗi khi tải file', 'error');
   }
 }
+
+async function exportSingleInvoice(dealId) {
+  try {
+    showToast('⏳ Đang tạo hóa đơn...', 'info');
+    const { data } = await api.getDeals(); // Get all to filter locally or we can use getDeal(id), but we only have getDeals() returning the array. 
+    // Wait, the API has a getDeal(id) ? Let's check api.js or deals.js
+    // I can just fetch getDeals('?status=won') again and find the specific one.
+    const res = await api.getDeals('?status=won');
+    const deal = res.data.find(d => d.id === dealId);
+    
+    if (!deal) {
+      showToast('Không tìm thấy dữ liệu hóa đơn này', 'error');
+      return;
+    }
+
+    const headers = [
+      'Tên Deal', 'Khách hàng', 'Công ty', 'Số điện thoại', 'Sản phẩm',
+      'Giá trị Hóa đơn (VND)', 'Ngày chốt', 'Ghi chú'
+    ];
+    
+    function fmtDateExact(d) {
+      if (!d) return '';
+      const dt = new Date(d);
+      if (isNaN(dt)) return '';
+      return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
+    }
+
+    const row = [
+      deal.title || '',
+      deal.contact_name || '',
+      deal.contact_company || '',
+      deal.contact_phone || '',
+      deal.product_name || 'Không xác định',
+      deal.estimated_value || '0',
+      fmtDateExact(deal.updated_at),
+      (deal.notes || '').replace(/\n/g, ' ')
+    ];
+
+    let csvContent = "\uFEFF" + headers.join(',') + '\n';
+    const escaped = row.map(field => {
+      if (field === null || field === undefined) return '""';
+      let str = String(field);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        str = '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    });
+    csvContent += escaped.join(',') + '\n';
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `HoaDon_${dealId}_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('✅ Tải hóa đơn thành công', 'success');
+  } catch (error) {
+    console.error(error);
+    showToast('Lỗi khi tải hóa đơn', 'error');
+  }
+}
+
