@@ -91,7 +91,7 @@ async function exportInvoicesToCSV(contactId = null) {
       if (!d) return '';
       const dt = new Date(d);
       if (isNaN(dt)) return '';
-      return \`\${String(dt.getDate()).padStart(2,'0')}/\${String(dt.getMonth()+1).padStart(2,'0')}/\${dt.getFullYear()}\`;
+      return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
     }
 
     const rows = data.map(d => [
@@ -123,7 +123,7 @@ async function exportInvoicesToCSV(contactId = null) {
     const a = document.createElement('a');
     a.href = url;
     const prefix = contactId ? 'HoaDon_KhachHang_' + contactId : 'ToanBo_HoaDon';
-    a.download = \`\${prefix}_\${new Date().toISOString().slice(0,10)}.csv\`;
+    a.download = `${prefix}_${new Date().toISOString().slice(0,10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     showToast('✅ Tải file Excel thành công', 'success');
