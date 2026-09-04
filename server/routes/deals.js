@@ -144,9 +144,16 @@ router.put('/:id', async (req, res) => {
     const estimated_value = Array.isArray(products) ? products.reduce((sum, p) => sum + Number(p.price || 0), 0) : 0;
 
     await conn.beginTransaction();
+    
+    // Nếu status undefined, giữ nguyên status cũ bằng cách COALESCE trong SQL (nhưng MySQL không cho phép COALESCE(?, status) nếu tham số là undefined từ nodejs).
+    // Nên lấy deal cũ ra trước hoặc dùng logic js:
+    const [existing] = await conn.execute('SELECT status FROM deals WHERE id = ?', [req.params.id]);
+    const currentStatus = existing.length ? existing[0].status : 'open';
+    const finalStatus = status || currentStatus;
+
     await conn.execute(
       'UPDATE deals SET title=?, contact_id=?, estimated_value=?, stage=?, status=?, next_followup_date=?, probability=?, notes=? WHERE id=?',
-      [title, contact_id, estimated_value, stage, status, next_followup_date||null, probability, notes, req.params.id]
+      [title, contact_id, estimated_value, stage||1, finalStatus, next_followup_date||null, probability||10, notes||'', req.params.id]
     );
 
     if (Array.isArray(products)) {
