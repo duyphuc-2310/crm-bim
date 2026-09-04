@@ -120,6 +120,7 @@ async function openContactDetail(id) {
           </div>
         </div>
         <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="exportInvoicesToCSV(${id})" title="Xuất Hóa đơn ra Excel">📄 Xuất Hóa đơn</button>
           <button class="btn btn-ghost btn-sm" onclick="openEditContactModal(${id});closeModal()">✏️ Sửa</button>
           <button class="btn btn-primary btn-sm" onclick="openAddDealModal(null,${id});closeModal()">+ Deal mới</button>
         </div>

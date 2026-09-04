@@ -9,6 +9,7 @@ const PAGES = {
   followups: { title: 'Follow-ups', render: renderFollowups },
   activities: { title: 'Hoạt Động', render: renderActivities },
   products: { title: 'Sản Phẩm', render: renderProducts },
+  invoices: { title: 'Hóa Đơn', render: renderInvoices },
   analytics: { title: 'Thống Kê & Báo Cáo', render: renderAnalytics }
 };
 
