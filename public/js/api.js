@@ -21,6 +21,9 @@ async function apiCall(method, path, data = null) {
 }
 
 const api = {
+  // Search
+  getSearch: (q) => apiCall('GET', `/search?q=${encodeURIComponent(q)}`),
+
   // Contacts
   getContacts: (q = '') => apiCall('GET', `/contacts${q}`),
   getContact: id => apiCall('GET', `/contacts/${id}`),

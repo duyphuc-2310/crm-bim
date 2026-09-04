@@ -23,6 +23,7 @@ app.use('/api/followups', require('./routes/followups'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/stats', require('./routes/stats'));
 app.use('/api/settings', require('./routes/settings'));
+app.use('/api/search', require('./routes/search'));
 
 // Health check
 app.get('/api/health', async (req, res) => {
