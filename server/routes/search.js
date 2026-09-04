@@ -34,7 +34,7 @@ router.get('/', async (req, res) => {
 
       // Search products
       const [products] = await conn.execute(
-        `SELECT id, name, category, price 
+        `SELECT id, name, product_group as category, ref_price as price 
          FROM products 
          WHERE name LIKE ? OR description LIKE ?
          LIMIT 5`,
