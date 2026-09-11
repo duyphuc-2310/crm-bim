@@ -2,6 +2,7 @@
 // Contacts Component
 // ================================================
 let allContacts = [];
+let contactGroupByDate = false;
 
 async function renderContacts() {
   const container = document.getElementById('page-container');
@@ -19,6 +20,10 @@ async function renderContacts() {
         <option value="">Tất cả mức BIM</option>
         ${Object.entries(BIM_MATURITY_LABELS).map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}
       </select>
+      <button class="btn btn-ghost" id="group-date-btn" onclick="toggleContactGroupByDate()" title="Chia nhóm theo ngày">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Nhóm theo tháng
+      </button>
       <button class="btn btn-primary" onclick="openAddContactModal()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Thêm khách hàng
@@ -29,6 +34,42 @@ async function renderContacts() {
     </div>
   `;
   loadContacts();
+}
+
+function toggleContactGroupByDate() {
+  contactGroupByDate = !contactGroupByDate;
+  const btn = document.getElementById('group-date-btn');
+  if (btn) {
+    btn.style.background = contactGroupByDate ? 'var(--accent)' : '';
+    btn.style.color = contactGroupByDate ? 'white' : '';
+    btn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      ${contactGroupByDate ? 'Bỏ nhóm' : 'Nhóm theo tháng'}
+    `;
+  }
+  filterContacts();
+}
+
+function getDateGroupLabel(dateStr) {
+  if (!dateStr) return 'Không rõ ngày';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return 'Không rõ ngày';
+  const now = new Date();
+  const diffMs = now - d;
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffDays === 0) return 'Hôm nay';
+  if (diffDays === 1) return 'Hôm qua';
+  if (diffDays <= 7) return 'Tuần này';
+  if (diffDays <= 30) return 'Tháng này';
+  // Group by month/year for older
+  return `Tháng ${d.getMonth() + 1} / ${d.getFullYear()}`;
+}
+
+function getDateGroupOrder(dateStr) {
+  if (!dateStr) return 99999;
+  const d = new Date(dateStr);
+  if (isNaN(d)) return 99999;
+  return -(d.getFullYear() * 100 + d.getMonth()); // negative so newest first
 }
 
 async function loadContacts() {
@@ -67,6 +108,35 @@ const BIM_COLORS = {
   '4_chuyen_sau': '#10b981'
 };
 
+function buildContactCard(c) {
+  const initials = c.name.split(' ').slice(-2).map(w=>w[0]).join('').toUpperCase();
+  const bimColor = BIM_COLORS[c.bim_maturity] || 'var(--text-muted)';
+  const createdLabel = c.created_at ? `<div class="contact-stat" style="color:var(--text-muted);font-size:11px">📅 ${formatDate(c.created_at)}</div>` : '';
+  return `
+    <div class="contact-card" onclick="openContactDetail(${c.id})">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+        <div class="contact-avatar">${initials}</div>
+        <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
+          <button class="btn btn-icon btn-ghost btn-sm" onclick="openEditContactModal(${c.id})" title="Sửa">✏️</button>
+          <button class="btn btn-icon btn-danger btn-sm" onclick="deleteContact(${c.id})" title="Xóa">🗑️</button>
+        </div>
+      </div>
+      <div class="contact-name">${c.name}</div>
+      <div class="contact-company">${c.company || '<em style="opacity:0.5">Chưa có công ty</em>'}</div>
+      <div class="contact-chips">
+        <span class="badge badge-gray">${ORG_TYPE_LABELS[c.org_type]||c.org_type}</span>
+        <span class="badge" style="background:${bimColor}22;color:${bimColor}">${BIM_MATURITY_LABELS[c.bim_maturity]||c.bim_maturity}</span>
+      </div>
+      <div class="contact-stats">
+        ${c.phone ? `<div class="contact-stat">📞 ${c.phone}</div>` : ''}
+        <div class="contact-stat"><strong>${c.deal_count||0}</strong> deal</div>
+        <div class="contact-stat"><strong>${c.activity_count||0}</strong> hoạt động</div>
+        ${createdLabel}
+      </div>
+    </div>
+  `;
+}
+
 function renderContactGrid(contacts) {
   const grid = document.getElementById('contacts-grid');
   if (!grid) return;
@@ -74,32 +144,41 @@ function renderContactGrid(contacts) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">👥</div><h3>Không tìm thấy khách hàng</h3><p>Thêm khách hàng mới để bắt đầu</p></div>`;
     return;
   }
-  grid.innerHTML = contacts.map(c => {
-    const initials = c.name.split(' ').slice(-2).map(w=>w[0]).join('').toUpperCase();
-    const bimColor = BIM_COLORS[c.bim_maturity] || 'var(--text-muted)';
-    return `
-      <div class="contact-card" onclick="openContactDetail(${c.id})">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
-          <div class="contact-avatar">${initials}</div>
-          <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
-            <button class="btn btn-icon btn-ghost btn-sm" onclick="openEditContactModal(${c.id})" title="Sửa">✏️</button>
-            <button class="btn btn-icon btn-danger btn-sm" onclick="deleteContact(${c.id})" title="Xóa">🗑️</button>
-          </div>
-        </div>
-        <div class="contact-name">${c.name}</div>
-        <div class="contact-company">${c.company || '<em style="opacity:0.5">Chưa có công ty</em>'}</div>
-        <div class="contact-chips">
-          <span class="badge badge-gray">${ORG_TYPE_LABELS[c.org_type]||c.org_type}</span>
-          <span class="badge" style="background:${bimColor}22;color:${bimColor}">${BIM_MATURITY_LABELS[c.bim_maturity]||c.bim_maturity}</span>
-        </div>
-        <div class="contact-stats">
-          ${c.phone ? `<div class="contact-stat">📞 ${c.phone}</div>` : ''}
-          <div class="contact-stat"><strong>${c.deal_count||0}</strong> deal</div>
-          <div class="contact-stat"><strong>${c.activity_count||0}</strong> hoạt động</div>
-        </div>
+
+  if (!contactGroupByDate) {
+    // Flat grid
+    grid.className = 'contact-grid';
+    grid.innerHTML = contacts.map(buildContactCard).join('');
+    return;
+  }
+
+  // Group by date label
+  grid.className = ''; // remove grid for grouped view
+  grid.style.display = 'block';
+
+  // Build groups map
+  const groupMap = new Map();
+  contacts.forEach(c => {
+    const label = getDateGroupLabel(c.created_at);
+    const order = getDateGroupOrder(c.created_at);
+    if (!groupMap.has(label)) groupMap.set(label, { order, items: [] });
+    groupMap.get(label).items.push(c);
+  });
+
+  // Sort groups newest first
+  const groups = [...groupMap.entries()].sort((a, b) => a[1].order - b[1].order);
+
+  grid.innerHTML = groups.map(([label, { items }]) => `
+    <div class="contact-date-group">
+      <div class="contact-date-group-header">
+        <span class="contact-date-group-label">${label}</span>
+        <span class="contact-date-group-count">${items.length} khách hàng</span>
       </div>
-    `;
-  }).join('');
+      <div class="contact-grid" style="margin-bottom:0">
+        ${items.map(buildContactCard).join('')}
+      </div>
+    </div>
+  `).join('');
 }
 
 async function openContactDetail(id) {
