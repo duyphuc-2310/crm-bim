@@ -112,11 +112,13 @@ function buildContactCard(c) {
   const initials = c.name.split(' ').slice(-2).map(w=>w[0]).join('').toUpperCase();
   const bimColor = BIM_COLORS[c.bim_maturity] || 'var(--text-muted)';
   const createdLabel = c.created_at ? `<div class="contact-stat" style="color:var(--text-muted);font-size:11px">📅 ${formatDate(c.created_at)}</div>` : '';
+  const nameAttr = (c.name||'').replace(/'/g,"\\'");
   return `
     <div class="contact-card" onclick="openContactDetail(${c.id})">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
         <div class="contact-avatar">${initials}</div>
         <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
+          <button class="btn btn-icon btn-ghost btn-sm" onclick="openQuickLog(${c.id},'${nameAttr}','contact')" title="Ghi chú nhanh" style="font-size:13px">⚡</button>
           <button class="btn btn-icon btn-ghost btn-sm" onclick="openEditContactModal(${c.id})" title="Sửa">✏️</button>
           <button class="btn btn-icon btn-danger btn-sm" onclick="deleteContact(${c.id})" title="Xóa">🗑️</button>
         </div>
@@ -133,9 +135,16 @@ function buildContactCard(c) {
         <div class="contact-stat"><strong>${c.activity_count||0}</strong> hoạt động</div>
         ${createdLabel}
       </div>
+      <div class="contact-quick-actions" onclick="event.stopPropagation()">
+        <button class="cqa-btn" onclick="openQuickLog(${c.id},'${nameAttr}','contact','email')">📧 Email</button>
+        <button class="cqa-btn" onclick="openQuickLog(${c.id},'${nameAttr}','contact','zalo')">💬 Zalo</button>
+        <button class="cqa-btn" onclick="openQuickLog(${c.id},'${nameAttr}','contact','call')">📞 Gọi</button>
+        <button class="cqa-btn" onclick="openQuickLog(${c.id},'${nameAttr}','contact','note')">📝 Ghi chú</button>
+      </div>
     </div>
   `;
 }
+
 
 function renderContactGrid(contacts) {
   const grid = document.getElementById('contacts-grid');

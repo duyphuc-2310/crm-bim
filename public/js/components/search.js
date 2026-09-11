@@ -119,13 +119,13 @@ const QUICK_LOG_TYPES = [
 
 let _quickLogState = { id: null, name: '', type: '', activityType: 'note' };
 
-function openQuickLog(id, name, type) {
-  // Close search
-  document.getElementById('global-search-results').style.display = 'none';
+function openQuickLog(id, name, type, defaultType) {
+  const sr = document.getElementById('global-search-results');
+  if (sr) sr.style.display = 'none';
 
-  _quickLogState = { id, name, type, activityType: 'note' };
+  const actType = defaultType || 'note';
+  _quickLogState = { id, name, type, activityType: actType };
 
-  // Remove old overlay if any
   document.getElementById('quick-log-overlay')?.remove();
 
   const overlay = document.createElement('div');
@@ -136,12 +136,12 @@ function openQuickLog(id, name, type) {
       <div class="quick-log-title">✏️ Ghi chú nhanh — ${name}</div>
       <div class="quick-log-types" id="ql-types">
         ${QUICK_LOG_TYPES.map(t => `
-          <button class="quick-log-type${t.key === 'note' ? ' active' : ''}" 
+          <button class="quick-log-type${t.key === actType ? ' active' : ''}"
                   onclick="selectQuickLogType('${t.key}', this)">${t.label}</button>
         `).join('')}
       </div>
-      <textarea class="quick-log-note" id="ql-note" rows="3" 
-                placeholder="Nhập nội dung nhanh (VD: Đã gửi mail báo giá, khách xem xét...)"></textarea>
+      <textarea class="quick-log-note" id="ql-note" rows="3"
+                placeholder="Nhập nội dung (VD: Đã gửi mail báo giá, khách đang cân nhắc...)"></textarea>
       <div class="quick-log-actions">
         <button class="btn btn-ghost btn-sm" onclick="closeQuickLog()">Hủy</button>
         <button class="btn btn-primary btn-sm" onclick="submitQuickLog()">💾 Lưu</button>
@@ -151,9 +151,7 @@ function openQuickLog(id, name, type) {
 
   overlay.addEventListener('click', closeQuickLog);
   document.body.appendChild(overlay);
-  setTimeout(() => overlay.querySelector('#ql-note').focus(), 50);
-
-  // Allow Escape to close
+  setTimeout(() => document.getElementById('ql-note')?.focus(), 60);
   document.addEventListener('keydown', _quickLogEsc);
 }
 

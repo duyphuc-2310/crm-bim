@@ -1049,3 +1049,38 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   padding: 2px 8px;
   border-radius: 10px;
 }
+
+/* Contact Quick Action Bar */
+.contact-quick-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.cqa-btn {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.cqa-btn:hover {
+  border-color: #6366f1;
+  background: rgba(99,102,241,0.12);
+  color: #a5b4fc;
+}
+[data-theme="light"] .cqa-btn:hover {
+  color: #6366f1;
+  background: rgba(99,102,241,0.08);
+}
+
