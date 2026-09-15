@@ -1084,3 +1084,15 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   background: rgba(99,102,241,0.08);
 }
 
+
+/* ================================================
+   Contact List View
+   ================================================ */
+.contact-list-wrapper { width:100%; overflow-x:auto; }
+.contact-list-table { width:100%; border-collapse:collapse; font-size:13px; }
+.contact-list-table thead tr { background:var(--bg-input); border-bottom:2px solid var(--border); }
+.contact-list-table th { padding:10px 14px; text-align:left; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; }
+.contact-list-table td { padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.contact-list-row:hover td { background:rgba(99,102,241,0.07); }
+.contact-list-table td:first-child { border-left:3px solid transparent; transition:border-color 0.15s; }
+.contact-list-row:hover td:first-child { border-left-color:var(--accent); }
