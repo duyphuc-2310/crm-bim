@@ -130,7 +130,7 @@ function buildContactCard(c) {
         <span class="badge" style="background:${bimColor}22;color:${bimColor}">${BIM_MATURITY_LABELS[c.bim_maturity]||c.bim_maturity}</span>
       </div>
       <div class="contact-stats">
-        ${c.phone ? `<div class="contact-stat">📞 ${c.phone}</div>` : ''}
+        ${c.phone ? c.phone.split(',').map(p => `<div class="contact-stat">📞 ${p.trim()}</div>`).join('') : ''}
         <div class="contact-stat"><strong>${c.deal_count||0}</strong> deal</div>
         <div class="contact-stat"><strong>${c.activity_count||0}</strong> hoạt động</div>
         ${createdLabel}

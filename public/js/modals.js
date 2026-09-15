@@ -191,7 +191,27 @@ async function openEditContactModal(id) {
   } catch(e) {}
 }
 
+function getPhoneRowHtml(phone) {
+  return `
+    <div class="phone-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
+      <input class="form-control contact-phone-input" value="${phone}" placeholder="0901234567" style="flex:1;">
+      <button type="button" class="btn btn-icon btn-ghost btn-sm" onclick="this.parentElement.remove()" style="color:var(--red);flex-shrink:0;">✕</button>
+    </div>
+  `;
+}
+
+function addPhoneRow() {
+  document.getElementById('f-phone-list').insertAdjacentHTML('beforeend', getPhoneRowHtml(''));
+  document.querySelector('#f-phone-list .contact-phone-input:last-child')?.focus();
+}
+
 function getContactForm(c = {}) {
+  // Phones stored comma-separated; split for display
+  const phones = (c.phone || '').split(',').map(p => p.trim()).filter(Boolean);
+  const phonesHtml = phones.length > 0
+    ? phones.map(p => getPhoneRowHtml(p)).join('')
+    : getPhoneRowHtml('');
+
   return `
     <div class="form-row">
       <div class="form-group">
@@ -203,15 +223,16 @@ function getContactForm(c = {}) {
         <input class="form-control" id="f-contact-company" value="${c.company||''}" placeholder="Công ty CP Kiến trúc XYZ">
       </div>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Số điện thoại</label>
-        <input class="form-control" id="f-contact-phone" value="${c.phone||''}" placeholder="0901234567">
+    <div class="form-group">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <label style="margin:0;">Số điện thoại</label>
+        <button type="button" class="btn btn-sm btn-ghost" onclick="addPhoneRow()">+ Thêm SĐT</button>
       </div>
-      <div class="form-group">
-        <label>Email</label>
-        <input class="form-control" id="f-contact-email" type="email" value="${c.email||''}" placeholder="email@company.vn">
-      </div>
+      <div id="f-phone-list">${phonesHtml}</div>
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input class="form-control" id="f-contact-email" type="email" value="${c.email||''}" placeholder="email@company.vn">
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -234,11 +255,16 @@ function getContactForm(c = {}) {
   `;
 }
 
+
 async function saveContact() {
+  // Gather all phone number inputs
+  const phoneInputs = document.querySelectorAll('.contact-phone-input');
+  const phones = Array.from(phoneInputs).map(i => i.value.trim()).filter(Boolean);
+
   const d = {
     name: document.getElementById('f-contact-name')?.value?.trim(),
     company: document.getElementById('f-contact-company')?.value?.trim(),
-    phone: document.getElementById('f-contact-phone')?.value?.trim(),
+    phone: phones.join(', '),
     email: document.getElementById('f-contact-email')?.value?.trim(),
     org_type: document.getElementById('f-contact-org')?.value,
     bim_maturity: document.getElementById('f-contact-bim')?.value,

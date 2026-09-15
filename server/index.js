@@ -24,6 +24,7 @@ app.use('/api/products', require('./routes/products'));
 app.use('/api/stats', require('./routes/stats'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/search', require('./routes/search'));
+app.use('/api/mailmerge', require('./routes/mailmerge'));
 
 // Health check
 app.get('/api/health', async (req, res) => {
@@ -70,7 +71,22 @@ async function autoMigrate() {
       for (const d of deals) {
         await db.execute('INSERT INTO deal_products (deal_id, product_id, price) VALUES (?, ?, ?)', [d.id, d.product_id, d.estimated_value]);
       }
-      console.log('Migration completed successfully!');
+      console.log('Migration deal_products completed successfully!');
+    }
+
+    // Expand phone column to support multiple numbers (comma-separated)
+    try {
+      const [cols] = await db.execute("SHOW COLUMNS FROM contacts LIKE 'phone'");
+      if (cols.length > 0) {
+        const colType = (cols[0].Type || '').toLowerCase();
+        if (colType === 'varchar(20)' || colType === 'varchar(50)') {
+          console.log('Migrating: Expanding contacts.phone to VARCHAR(300)...');
+          await db.execute('ALTER TABLE contacts MODIFY phone VARCHAR(300)');
+          console.log('Migration phone column done.');
+        }
+      }
+    } catch (e) {
+      console.error('Phone migration (non-fatal):', e.message);
     }
   } catch (err) {
     console.error('Migration failed:', err);
