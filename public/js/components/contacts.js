@@ -44,7 +44,7 @@ function toggleContactGroupByDate() {
     btn.style.color = contactGroupByDate ? 'white' : '';
     btn.innerHTML = `
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      ${contactGroupByDate ? 'Bỏ nhóm' : 'Nhóm theo tháng'}
+      ${contactGroupByDate ? 'Bỏ nhóm' : 'Nhóm theo ngày'}
     `;
   }
   filterContacts();
@@ -54,22 +54,27 @@ function getDateGroupLabel(dateStr) {
   if (!dateStr) return 'Không rõ ngày';
   const d = new Date(dateStr);
   if (isNaN(d)) return 'Không rõ ngày';
+
   const now = new Date();
-  const diffMs = now - d;
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (diffDays === 0) return 'Hôm nay';
-  if (diffDays === 1) return 'Hôm qua';
-  if (diffDays <= 7) return 'Tuần này';
-  if (diffDays <= 30) return 'Tháng này';
-  // Group by month/year for older
-  return `Tháng ${d.getMonth() + 1} / ${d.getFullYear()}`;
+  const todayStr = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const dStr = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.round((todayMidnight - dMidnight) / 86400000);
+
+  if (diffDays === 0) return `📅 Hôm nay — ${dStr}`;
+  if (diffDays === 1) return `📅 Hôm qua — ${dStr}`;
+  return `📅 ${dStr}`;
 }
 
 function getDateGroupOrder(dateStr) {
-  if (!dateStr) return 99999;
+  if (!dateStr) return 0;
   const d = new Date(dateStr);
-  if (isNaN(d)) return 99999;
-  return -(d.getFullYear() * 100 + d.getMonth()); // negative so newest first
+  if (isNaN(d)) return 0;
+  // Use exact date (YYYYMMDD) as sort key — newest first (negative)
+  const key = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  return -key;
 }
 
 async function loadContacts() {
